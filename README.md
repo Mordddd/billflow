@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BillFlow
+
+Invoice management for Indonesian freelancers and small businesses.  
+Create professional invoices, send them through WhatsApp, and track payments — all from one dashboard.
+
+## Features
+
+- **Invoice CRUD** — Create, view, and manage invoices with line items, tax (PPN), and discount support
+- **WhatsApp Sharing** — One-tap invoice delivery via WhatsApp deep link with prefilled message
+- **Public Invoice Page** — Shareable `/invoice/[number]` page for customers (no login required)
+- **Customer Management** — Store and browse customer contacts with outstanding balance overview
+- **Dashboard** — Summary cards (outstanding, paid, overdue) and recent invoice feed
+- **Payment Tracking** — Record payments and mark invoices as paid
+- **Settings** — Business profile, invoice prefix/numbering, bank/payment details
+- **Auth** — Email/password authentication via Supabase Auth
+- **Multi-tenant RLS** — Row Level Security with organization-scoped data isolation
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 16 (App Router, Turbopack) |
+| Language | TypeScript (strict) |
+| Styling | Tailwind CSS v4 |
+| UI Components | Radix UI + shadcn/ui pattern |
+| Database | Supabase (PostgreSQL + Auth + RLS) |
+| Charts | Recharts (ready, not yet wired) |
+| Font | Geist Sans / Geist Mono |
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+# Install dependencies
+npm install
+
+# Create .env.local with your Supabase credentials
+cp .env.example .env.local
+
+# Run the Supabase schema (paste supabase/schema.sql in your SQL editor)
+
+# Start dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/
+│   ├── (app)/          # Authenticated pages (dashboard, invoices, customers, etc.)
+│   ├── (auth)/         # Login & signup
+│   ├── invoice/[number]/ # Public-facing invoice page
+│   └── page.tsx        # Landing page
+├── components/
+│   ├── ui/             # Reusable primitives (button, card, input, etc.)
+│   ├── app-sidebar.tsx # Navigation sidebar + mobile bottom nav
+│   ├── empty-state.tsx # Empty state placeholder
+│   └── invoice-status-badge.tsx
+├── lib/
+│   ├── supabase/       # Client, server, and middleware helpers
+│   ├── types.ts        # Core database types
+│   └── utils.ts        # Formatters (Rupiah, date, WhatsApp link)
+└── middleware.ts       # Auth guard (redirect unauthenticated users)
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## License
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
