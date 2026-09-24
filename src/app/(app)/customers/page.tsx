@@ -1,54 +1,21 @@
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/empty-state"
 import { formatRupiah } from "@/lib/utils"
-import type { Customer } from "@/lib/types"
+import { getCustomers, createCustomer } from "@/lib/actions"
 import { Users, Plus, Search, Phone, Mail } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { revalidatePath } from "next/cache"
 
-// ponytail: demo data — replace with Supabase query
-const customers: (Customer & {
-  total_invoices: number
-  outstanding: number
-})[] = [
-  {
-    id: "c1",
-    organization_id: "org1",
-    name: "PT Example",
-    whatsapp: "081234567890",
-    email: "contact@example.co.id",
-    address: "Jakarta",
-    created_at: "2026-08-01",
-    updated_at: "2026-09-20",
-    total_invoices: 12,
-    outstanding: 2500000,
-  },
-  {
-    id: "c2",
-    organization_id: "org1",
-    name: "Budi Santoso",
-    whatsapp: "081298765432",
-    email: "budi@gmail.com",
-    address: null,
-    created_at: "2026-07-15",
-    updated_at: "2026-09-25",
-    total_invoices: 5,
-    outstanding: 0,
-  },
-  {
-    id: "c3",
-    organization_id: "org1",
-    name: "CV Maju Bersama",
-    whatsapp: "081355544433",
-    email: "admin@majubersama.co.id",
-    address: "Bandung",
-    created_at: "2026-06-10",
-    updated_at: "2026-09-10",
-    total_invoices: 8,
-    outstanding: 3500000,
-  },
-]
+export default async function CustomersPage() {
+  const customers = await getCustomers()
 
-export default function CustomersPage() {
+  async function addCustomer(formData: FormData) {
+    "use server"
+    await createCustomer(formData)
+    revalidatePath("/customers")
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -59,11 +26,34 @@ export default function CustomersPage() {
             Manage your customer contacts
           </p>
         </div>
-        <Button>
+      </div>
+
+      {/* Add Customer form */}
+      <form action={addCustomer} className="rounded-xl border bg-card p-4 space-y-3">
+        <p className="text-sm font-medium">Add Customer</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label htmlFor="name">Name *</Label>
+            <Input id="name" name="name" required placeholder="Customer name" />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="whatsapp">WhatsApp</Label>
+            <Input id="whatsapp" name="whatsapp" placeholder="081234567890" />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" name="email" type="email" placeholder="email@example.com" />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="address">Address</Label>
+            <Input id="address" name="address" placeholder="Address" />
+          </div>
+        </div>
+        <Button type="submit" size="sm">
           <Plus className="h-4 w-4" />
           Add Customer
         </Button>
-      </div>
+      </form>
 
       {/* Search */}
       <div className="relative max-w-sm">

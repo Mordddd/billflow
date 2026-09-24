@@ -1,11 +1,13 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatRupiah, formatDate } from "@/lib/utils"
+import { createInvoice } from "@/lib/actions"
+import { createClient } from "@/lib/supabase/client"
 import { Plus, Trash2, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
@@ -16,6 +18,12 @@ interface LineItem {
   quantity: number
   unit_price: number
   discount: number
+}
+
+interface CustomerOption {
+  id: string
+  name: string
+  whatsapp: string | null
 }
 
 function newItem(): LineItem {
@@ -31,7 +39,8 @@ function newItem(): LineItem {
 export default function CreateInvoicePage() {
   const [customerName, setCustomerName] = useState("")
   const [customerWhatsapp, setCustomerWhatsapp] = useState("")
-  const [invoiceNumber, setInvoiceNumber] = useState("INV-2026-0099")
+  const [customerId, setCustomerId] = useState("")
+  const [customers, setCustomers] = useState<CustomerOption[]>([])
   const [issueDate, setIssueDate] = useState(
     new Date().toISOString().split("T")[0]
   )
@@ -39,7 +48,15 @@ export default function CreateInvoicePage() {
   const [notes, setNotes] = useState("")
   const [items, setItems] = useState<LineItem[]>([newItem()])
   const [taxEnabled, setTaxEnabled] = useState(false)
-  const [taxRate, setTaxRate] = useState(11) // PPN 11%
+  const [taxRate, setTaxRate] = useState(11)
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.from("customers").select("id, name, whatsapp").order("name").then(({ data }) => {
+      if (data) setCustomers(data)
+    })
+  }, [])
 
   const subtotal = useMemo(
     () =>
@@ -67,8 +84,16 @@ export default function CreateInvoicePage() {
     setItems((prev) => prev.filter((item) => item.id !== id))
   }
 
-  function handleSave() {
-    // ponytail: validate + save to Supabase when connected
+  function selectCustomer(id: string) {
+    const c = customers.find(c => c.id === id)
+    if (c) {
+      setCustomerId(c.id)
+      setCustomerName(c.name)
+      setCustomerWhatsapp(c.whatsapp || "")
+    }
+  }
+
+  async function handleSave() {
     if (!customerName.trim()) {
       toast.error("Please enter a customer name.")
       return
@@ -81,7 +106,31 @@ export default function CreateInvoicePage() {
       toast.error("Please fill in all item descriptions and prices.")
       return
     }
-    toast.success("Invoice saved successfully!")
+
+    setSubmitting(true)
+    const formData = new FormData()
+    if (customerId) formData.set("customer_id", customerId)
+    formData.set("customer_name", customerName)
+    formData.set("customer_whatsapp", customerWhatsapp)
+    formData.set("issue_date", issueDate)
+    formData.set("due_date", dueDate)
+    formData.set("notes", notes)
+    formData.set("tax_rate", taxEnabled ? String(taxRate) : "0")
+    formData.set("items", JSON.stringify(
+      items.map(i => ({
+        description: i.description,
+        quantity: i.quantity,
+        unit_price: i.unit_price,
+        discount: i.discount,
+      }))
+    ))
+
+    try {
+      await createInvoice(formData)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to create invoice")
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -112,6 +161,30 @@ export default function CreateInvoicePage() {
               <CardTitle className="text-base">Customer</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {customers.length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="customer-select">Existing customer</Label>
+                  <select
+                    id="customer-select"
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                    value={customerId}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        selectCustomer(e.target.value)
+                      } else {
+                        setCustomerId("")
+                        setCustomerName("")
+                        setCustomerWhatsapp("")
+                      }
+                    }}
+                  >
+                    <option value="">New customer</option>
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="customer-name">Name</Label>
@@ -119,7 +192,7 @@ export default function CreateInvoicePage() {
                     id="customer-name"
                     placeholder="Customer name"
                     value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
+                    onChange={(e) => { setCustomerName(e.target.value); setCustomerId("") }}
                   />
                 </div>
                 <div className="space-y-2">
@@ -141,15 +214,7 @@ export default function CreateInvoicePage() {
               <CardTitle className="text-base">Invoice details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="inv-number">Invoice number</Label>
-                  <Input
-                    id="inv-number"
-                    value={invoiceNumber}
-                    onChange={(e) => setInvoiceNumber(e.target.value)}
-                  />
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="issue-date">Issue date</Label>
                   <Input
@@ -314,17 +379,13 @@ export default function CreateInvoicePage() {
                 <CardTitle className="text-base">Invoice Preview</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Mini preview */}
                 <div className="rounded-lg border bg-white p-5 space-y-4 text-xs">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="font-semibold text-sm">Your Business</p>
-                      <p className="text-muted-foreground">your@email.com</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-mono font-semibold text-sm">
-                        {invoiceNumber}
-                      </p>
+                      <p className="font-mono font-semibold text-sm">DRAFT</p>
                     </div>
                   </div>
 
@@ -352,10 +413,7 @@ export default function CreateInvoicePage() {
 
                   <div className="border-t pt-3 space-y-2">
                     {items.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex justify-between"
-                      >
+                      <div key={item.id} className="flex justify-between">
                         <span className="truncate max-w-[60%]">
                           {item.description || "Item"}
                         </span>
@@ -396,8 +454,8 @@ export default function CreateInvoicePage() {
 
             {/* Actions */}
             <div className="flex flex-col gap-2">
-              <Button onClick={handleSave} size="lg" className="w-full">
-                Save Invoice
+              <Button onClick={handleSave} size="lg" className="w-full" disabled={submitting}>
+                {submitting ? "Saving..." : "Save Invoice"}
               </Button>
               <Button variant="outline" size="lg" className="w-full" asChild>
                 <Link href="/invoices">Cancel</Link>

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { InvoiceStatusBadge } from "@/components/invoice-status-badge"
 import { EmptyState } from "@/components/empty-state"
 import { formatRupiah, formatDate } from "@/lib/utils"
-import type { Invoice, InvoiceStatus } from "@/lib/types"
+import { getInvoices } from "@/lib/actions"
 import {
   FileText,
   Plus,
@@ -11,95 +11,9 @@ import {
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 
-// ponytail: demo data — replace with Supabase query
-const invoices: (Omit<Invoice, 'customer'> & { customer: { name: string } })[] = [
-  {
-    id: "1",
-    organization_id: "org1",
-    customer_id: "c1",
-    invoice_number: "INV-2026-0098",
-    status: "pending",
-    issue_date: "2026-09-20",
-    due_date: "2026-09-28",
-    subtotal: 2500000,
-    discount: 0,
-    tax_rate: 0,
-    tax_amount: 0,
-    total: 2500000,
-    notes: null,
-    currency: "IDR",
-    created_at: "2026-09-20",
-    updated_at: "2026-09-20",
-    customer: { name: "PT Example" },
-  },
-  {
-    id: "2",
-    organization_id: "org1",
-    customer_id: "c2",
-    invoice_number: "INV-2026-0097",
-    status: "paid",
-    issue_date: "2026-09-18",
-    due_date: "2026-09-25",
-    subtotal: 850000,
-    discount: 0,
-    tax_rate: 0,
-    tax_amount: 0,
-    total: 850000,
-    notes: null,
-    currency: "IDR",
-    created_at: "2026-09-18",
-    updated_at: "2026-09-25",
-    customer: { name: "Budi Santoso" },
-  },
-  {
-    id: "3",
-    organization_id: "org1",
-    customer_id: "c3",
-    invoice_number: "INV-2026-0091",
-    status: "overdue",
-    issue_date: "2026-09-10",
-    due_date: "2026-09-19",
-    subtotal: 3500000,
-    discount: 0,
-    tax_rate: 0,
-    tax_amount: 0,
-    total: 3500000,
-    notes: null,
-    currency: "IDR",
-    created_at: "2026-09-10",
-    updated_at: "2026-09-10",
-    customer: { name: "CV Maju Bersama" },
-  },
-  {
-    id: "4",
-    organization_id: "org1",
-    customer_id: "c4",
-    invoice_number: "INV-2026-0090",
-    status: "draft",
-    issue_date: "2026-09-08",
-    due_date: "2026-09-22",
-    subtotal: 1200000,
-    discount: 0,
-    tax_rate: 0,
-    tax_amount: 0,
-    total: 1200000,
-    notes: null,
-    currency: "IDR",
-    created_at: "2026-09-08",
-    updated_at: "2026-09-08",
-    customer: { name: "Sari Dewi" },
-  },
-]
+export default async function InvoicesPage() {
+  const invoices = await getInvoices()
 
-const statusFilters: { label: string; value: InvoiceStatus | "all" }[] = [
-  { label: "All", value: "all" },
-  { label: "Draft", value: "draft" },
-  { label: "Pending", value: "pending" },
-  { label: "Paid", value: "paid" },
-  { label: "Overdue", value: "overdue" },
-]
-
-export default function InvoicesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -118,22 +32,11 @@ export default function InvoicesPage() {
         </Button>
       </div>
 
-      {/* Search + Filters */}
+      {/* Search */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search invoices..." className="pl-9" />
-        </div>
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
-          {statusFilters.map((f) => (
-            <button
-              key={f.value}
-              className="shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
-              data-active={f.value === "all"}
-            >
-              {f.label}
-            </button>
-          ))}
         </div>
       </div>
 

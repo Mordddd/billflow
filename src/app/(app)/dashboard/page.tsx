@@ -1,5 +1,5 @@
 import { formatRupiah } from "@/lib/utils"
-import type { DashboardSummary, Invoice } from "@/lib/types"
+import { getDashboardData } from "@/lib/actions"
 import { Card, CardContent } from "@/components/ui/card"
 import { InvoiceStatusBadge } from "@/components/invoice-status-badge"
 import { EmptyState } from "@/components/empty-state"
@@ -8,110 +8,28 @@ import {
   ArrowUpRight,
   AlertCircle,
   FileText,
-  Send,
   Bell,
   Eye,
 } from "lucide-react"
 import Link from "next/link"
 
-// ponytail: demo data — replace with Supabase queries when connected
-const summary: DashboardSummary = {
-  outstanding: 12450000,
-  paid_this_month: 28700000,
-  overdue: 4200000,
-  total_invoices: 128,
-}
+export default async function DashboardPage() {
+  const { summary, recentInvoices } = await getDashboardData()
 
-const recentInvoices: (Omit<Invoice, 'customer'> & { customer: { name: string } })[] = [
-  {
-    id: "1",
-    organization_id: "org1",
-    customer_id: "c1",
-    invoice_number: "INV-2026-0098",
-    status: "pending",
-    issue_date: "2026-09-20",
-    due_date: "2026-09-28",
-    subtotal: 2500000,
-    discount: 0,
-    tax_rate: 0,
-    tax_amount: 0,
-    total: 2500000,
-    notes: null,
-    currency: "IDR",
-    created_at: "2026-09-20",
-    updated_at: "2026-09-20",
-    customer: { name: "PT Example" },
-  },
-  {
-    id: "2",
-    organization_id: "org1",
-    customer_id: "c2",
-    invoice_number: "INV-2026-0097",
-    status: "paid",
-    issue_date: "2026-09-18",
-    due_date: "2026-09-25",
-    subtotal: 850000,
-    discount: 0,
-    tax_rate: 0,
-    tax_amount: 0,
-    total: 850000,
-    notes: null,
-    currency: "IDR",
-    created_at: "2026-09-18",
-    updated_at: "2026-09-25",
-    customer: { name: "Budi Santoso" },
-  },
-  {
-    id: "3",
-    organization_id: "org1",
-    customer_id: "c3",
-    invoice_number: "INV-2026-0091",
-    status: "overdue",
-    issue_date: "2026-09-10",
-    due_date: "2026-09-19",
-    subtotal: 3500000,
-    discount: 0,
-    tax_rate: 0,
-    tax_amount: 0,
-    total: 3500000,
-    notes: null,
-    currency: "IDR",
-    created_at: "2026-09-10",
-    updated_at: "2026-09-10",
-    customer: { name: "CV Maju Bersama" },
-  },
-]
+  const now = new Date()
+  const overdueInvoices = recentInvoices.filter(
+    (i) => i.status === "overdue" || (["sent", "pending"].includes(i.status) && new Date(i.due_date) < now)
+  )
 
-const overdueInvoices = recentInvoices.filter((i) => i.status === "overdue")
+  const summaryCards = [
+    { label: "Outstanding", value: summary.outstanding, isMoney: true },
+    { label: "Paid this month", value: summary.paid_this_month, isMoney: true },
+    { label: "Overdue", value: summary.overdue, isMoney: true, accent: true },
+    { label: "Total invoices", value: summary.total_invoices, isMoney: false },
+  ]
 
-const summaryCards = [
-  {
-    label: "Outstanding",
-    value: summary.outstanding,
-    isMoney: true,
-  },
-  {
-    label: "Paid this month",
-    value: summary.paid_this_month,
-    isMoney: true,
-  },
-  {
-    label: "Overdue",
-    value: summary.overdue,
-    isMoney: true,
-    accent: true,
-  },
-  {
-    label: "Total invoices",
-    value: summary.total_invoices,
-    isMoney: false,
-  },
-]
-
-export default function DashboardPage() {
   return (
     <div className="space-y-8">
-      {/* Page header */}
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">
